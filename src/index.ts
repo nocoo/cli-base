@@ -15,6 +15,7 @@ export { ConfigManager, type ConfigManagerOptions } from "./config.js";
 export {
 	performLogin,
 	escapeHtml,
+	defaultGenerateNonce,
 	type LoginDeps,
 	type LoginResult,
 } from "./login.js";

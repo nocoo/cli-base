@@ -4,7 +4,12 @@
 
 import http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { type LoginDeps, escapeHtml, performLogin } from "./login.js";
+import {
+	type LoginDeps,
+	defaultGenerateNonce,
+	escapeHtml,
+	performLogin,
+} from "./login.js";
 
 describe("login", () => {
 	describe("escapeHtml", () => {
@@ -36,6 +41,19 @@ describe("login", () => {
 
 		it("returns unchanged string with no special characters", () => {
 			expect(escapeHtml("hello world")).toBe("hello world");
+		});
+	});
+
+	describe("defaultGenerateNonce", () => {
+		it("generates a 32-character hex string", () => {
+			const nonce = defaultGenerateNonce();
+			expect(nonce).toMatch(/^[a-f0-9]{32}$/);
+		});
+
+		it("generates unique values on each call", () => {
+			const nonce1 = defaultGenerateNonce();
+			const nonce2 = defaultGenerateNonce();
+			expect(nonce1).not.toBe(nonce2);
 		});
 	});
 
@@ -368,6 +386,177 @@ describe("login", () => {
 			const result = await loginPromise;
 			expect(result.success).toBe(false);
 			expect(result.error).toContain("custom_token");
+		});
+
+		describe("CSRF state nonce", () => {
+			it("includes state in URL when useStateNonce is true", async () => {
+				const openBrowser = vi.fn().mockResolvedValue(undefined);
+				const onSaveToken = vi.fn();
+
+				const loginPromise = performLogin({
+					openBrowser,
+					onSaveToken,
+					apiUrl: "https://example.com",
+					timeoutMs: 5000,
+					useStateNonce: true,
+					generateNonce: () => "test-nonce-123",
+				});
+
+				await new Promise((resolve) => setTimeout(resolve, 100));
+
+				const url = openBrowser.mock.calls[0][0] as string;
+				expect(url).toContain("state=test-nonce-123");
+
+				// Complete the login with matching state
+				const callbackMatch = url.match(/callback=([^&]+)/);
+				const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+				const callbackParsed = new URL(callbackUrl);
+				const port = callbackParsed.port;
+
+				await new Promise<void>((resolve) => {
+					const req = http.request(
+						{
+							hostname: "127.0.0.1",
+							port: Number(port),
+							path: "/callback?api_key=token&state=test-nonce-123",
+							method: "GET",
+						},
+						() => resolve(),
+					);
+					req.end();
+				});
+
+				const result = await loginPromise;
+				expect(result.success).toBe(true);
+			});
+
+			it("rejects callback with wrong state", async () => {
+				const openBrowser = vi.fn().mockResolvedValue(undefined);
+				const onSaveToken = vi.fn();
+
+				const loginPromise = performLogin({
+					openBrowser,
+					onSaveToken,
+					apiUrl: "https://example.com",
+					timeoutMs: 5000,
+					useStateNonce: true,
+					generateNonce: () => "expected-state",
+				});
+
+				await new Promise((resolve) => setTimeout(resolve, 100));
+
+				const url = openBrowser.mock.calls[0][0] as string;
+				const callbackMatch = url.match(/callback=([^&]+)/);
+				const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+				const callbackParsed = new URL(callbackUrl);
+				const port = callbackParsed.port;
+
+				// Make callback with wrong state
+				await new Promise<void>((resolve) => {
+					const req = http.request(
+						{
+							hostname: "127.0.0.1",
+							port: Number(port),
+							path: "/callback?api_key=token&state=wrong-state",
+							method: "GET",
+						},
+						(res) => {
+							expect(res.statusCode).toBe(403);
+							resolve();
+						},
+					);
+					req.on("error", () => resolve());
+					req.end();
+				});
+
+				const result = await loginPromise;
+				expect(result.success).toBe(false);
+				expect(result.error).toContain("CSRF");
+				expect(onSaveToken).not.toHaveBeenCalled();
+			});
+
+			it("rejects callback with missing state", async () => {
+				const openBrowser = vi.fn().mockResolvedValue(undefined);
+				const onSaveToken = vi.fn();
+
+				const loginPromise = performLogin({
+					openBrowser,
+					onSaveToken,
+					apiUrl: "https://example.com",
+					timeoutMs: 5000,
+					useStateNonce: true,
+					generateNonce: () => "expected-state",
+				});
+
+				await new Promise((resolve) => setTimeout(resolve, 100));
+
+				const url = openBrowser.mock.calls[0][0] as string;
+				const callbackMatch = url.match(/callback=([^&]+)/);
+				const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+				const callbackParsed = new URL(callbackUrl);
+				const port = callbackParsed.port;
+
+				// Make callback without state
+				await new Promise<void>((resolve) => {
+					const req = http.request(
+						{
+							hostname: "127.0.0.1",
+							port: Number(port),
+							path: "/callback?api_key=token",
+							method: "GET",
+						},
+						(res) => {
+							expect(res.statusCode).toBe(403);
+							resolve();
+						},
+					);
+					req.on("error", () => resolve());
+					req.end();
+				});
+
+				const result = await loginPromise;
+				expect(result.success).toBe(false);
+				expect(result.error).toContain("CSRF");
+			});
+
+			it("does not include state when useStateNonce is false", async () => {
+				const openBrowser = vi.fn().mockResolvedValue(undefined);
+				const onSaveToken = vi.fn();
+
+				const loginPromise = performLogin({
+					openBrowser,
+					onSaveToken,
+					apiUrl: "https://example.com",
+					timeoutMs: 5000,
+					useStateNonce: false,
+				});
+
+				await new Promise((resolve) => setTimeout(resolve, 100));
+
+				const url = openBrowser.mock.calls[0][0] as string;
+				expect(url).not.toContain("state=");
+
+				// Complete without state
+				const callbackMatch = url.match(/callback=([^&]+)/);
+				const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+				const callbackParsed = new URL(callbackUrl);
+				const port = callbackParsed.port;
+
+				await new Promise<void>((resolve) => {
+					const req = http.request(
+						{
+							hostname: "127.0.0.1",
+							port: Number(port),
+							path: "/callback?api_key=token",
+							method: "GET",
+						},
+						() => resolve(),
+					);
+					req.end();
+				});
+
+				await loginPromise;
+			});
 		});
 	});
 });

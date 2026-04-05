@@ -10,8 +10,10 @@
  * Security:
  * - Loopback-only binding prevents LAN exposure
  * - HTML output is entity-escaped to prevent reflected XSS
+ * - Optional CSRF state nonce prevents forged callbacks
  */
 
+import { randomBytes } from "node:crypto";
 import http from "node:http";
 
 export interface LoginDeps {
@@ -35,6 +37,17 @@ export interface LoginDeps {
 	 * Defaults to "/api/auth/cli".
 	 */
 	loginPath?: string;
+	/**
+	 * Enable CSRF state nonce validation.
+	 * When true, a random state is generated and must be returned by the callback.
+	 * Defaults to false for backward compatibility.
+	 */
+	useStateNonce?: boolean;
+	/**
+	 * Custom nonce generator for testing.
+	 * Only used when useStateNonce is true.
+	 */
+	generateNonce?: () => string;
 }
 
 export interface LoginResult {
@@ -56,6 +69,13 @@ export function escapeHtml(str: string): string {
 }
 
 /**
+ * Generate a cryptographically secure random nonce.
+ */
+export function defaultGenerateNonce(): string {
+	return randomBytes(16).toString("hex");
+}
+
+/**
  * Perform browser-based OAuth login flow.
  *
  * @param deps - Dependencies for the login flow
@@ -71,7 +91,12 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			log,
 			tokenParam = "api_key",
 			loginPath = "/api/auth/cli",
+			useStateNonce = false,
+			generateNonce = defaultGenerateNonce,
 		} = deps;
+
+		// Generate state nonce if CSRF protection is enabled
+		const expectedState = useStateNonce ? generateNonce() : null;
 
 		const server = http.createServer((req, res) => {
 			const url = new URL(req.url ?? "/", "http://localhost");
@@ -80,6 +105,25 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 				res.writeHead(404, { "Content-Type": "text/plain" });
 				res.end("Not found");
 				return;
+			}
+
+			// Validate CSRF state nonce if enabled
+			if (expectedState !== null) {
+				const state = url.searchParams.get("state");
+				if (state !== expectedState) {
+					res.writeHead(403, { "Content-Type": "text/html" });
+					res.end(
+						errorHtml(
+							"Invalid or missing state parameter. This may be a forged request.",
+						),
+					);
+					cleanup();
+					resolve({
+						success: false,
+						error: "State mismatch — possible CSRF attempt",
+					});
+					return;
+				}
 			}
 
 			const token = url.searchParams.get(tokenParam);
@@ -118,7 +162,12 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			}
 
 			const callbackUrl = `http://127.0.0.1:${addr.port}/callback`;
-			const loginUrl = `${apiUrl}${loginPath}?callback=${encodeURIComponent(callbackUrl)}`;
+			let loginUrl = `${apiUrl}${loginPath}?callback=${encodeURIComponent(callbackUrl)}`;
+
+			// Append state parameter if CSRF protection is enabled
+			if (expectedState !== null) {
+				loginUrl += `&state=${encodeURIComponent(expectedState)}`;
+			}
 
 			openBrowser(loginUrl).catch(() => {
 				// Browser failed — print URL so user can open manually
