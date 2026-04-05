@@ -86,7 +86,7 @@ describe("login", () => {
 						});
 						res.on("end", () => {
 							expect(res.statusCode).toBe(200);
-							expect(data).toContain("Login successful");
+							expect(data).toContain("Login Successful");
 							resolve();
 						});
 					},

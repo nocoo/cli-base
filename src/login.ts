@@ -79,9 +79,72 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			onSaveToken(apiKey);
 
 			res.writeHead(200, { "Content-Type": "text/html" });
-			res.end(
-				"<html><body><h1>Login successful!</h1><p>You can close this window.</p></body></html>",
-			);
+			res.end(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Successful</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #171717;
+      color: #e5e5e5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1.5rem;
+      background: #1f1f1f;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon svg {
+      width: 32px;
+      height: 32px;
+      color: #c9a227;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #fafafa;
+    }
+    p {
+      font-size: 0.875rem;
+      color: #737373;
+      margin-bottom: 1.5rem;
+    }
+    .hint {
+      font-size: 0.75rem;
+      color: #525252;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+    <h1>Login Successful</h1>
+    <p>You have been authenticated.</p>
+    <p class="hint">You can close this window.</p>
+  </div>
+</body>
+</html>`);
 
 			cleanup();
 			resolve({ success: true, email: email || undefined });
