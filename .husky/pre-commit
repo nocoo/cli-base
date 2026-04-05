@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# 6DQ Pre-commit: L1 (UT ≥95%) + G1 (Lint)
+echo "🔍 Running pre-commit checks..."
+
+# G1: Static analysis (tsc + biome)
+echo "📝 G1: Type checking..."
+bun run lint || exit 1
+
+# L1: Unit tests with coverage threshold (95%)
+echo "🧪 L1: Unit tests with coverage..."
+bunx vitest run --coverage || exit 1
+
+echo "✅ Pre-commit passed: L1 (UT ≥95%) + G1 (tsc + Biome)"

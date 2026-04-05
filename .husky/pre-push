@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# 6DQ Pre-push: G2 (Security scanning)
+echo "🔒 Running pre-push checks..."
+
+# G2: Security - gitleaks
+echo "🔐 G2: Secret scanning with gitleaks..."
+if command -v gitleaks &> /dev/null; then
+  gitleaks detect --source . --no-git || exit 1
+else
+  echo "⚠️  gitleaks not installed, skipping secret scan"
+fi
+
+echo "✅ Pre-push passed: G2 (Security)"
