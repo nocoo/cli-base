@@ -100,7 +100,11 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			res.end(successHtml());
 
 			cleanup();
-			resolve({ success: true, email: email || undefined });
+			const result: LoginResult = { success: true };
+			if (email) {
+				result.email = email;
+			}
+			resolve(result);
 		});
 
 		// Listen on random port, loopback only
