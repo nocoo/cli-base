@@ -25,6 +25,16 @@ export interface LoginDeps {
 	timeoutMs: number;
 	/** Optional logging function */
 	log?: (msg: string) => void;
+	/**
+	 * Query parameter name for the token in the callback URL.
+	 * Defaults to "api_key".
+	 */
+	tokenParam?: string;
+	/**
+	 * Login endpoint path appended to apiUrl.
+	 * Defaults to "/api/auth/cli".
+	 */
+	loginPath?: string;
 }
 
 export interface LoginResult {
@@ -53,7 +63,15 @@ export function escapeHtml(str: string): string {
  */
 export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 	return new Promise((resolve) => {
-		const { openBrowser, onSaveToken, apiUrl, timeoutMs, log } = deps;
+		const {
+			openBrowser,
+			onSaveToken,
+			apiUrl,
+			timeoutMs,
+			log,
+			tokenParam = "api_key",
+			loginPath = "/api/auth/cli",
+		} = deps;
 
 		const server = http.createServer((req, res) => {
 			const url = new URL(req.url ?? "/", "http://localhost");
@@ -64,22 +82,76 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 				return;
 			}
 
-			const apiKey = url.searchParams.get("api_key");
+			const token = url.searchParams.get(tokenParam);
 			const email = url.searchParams.get("email");
 
-			if (!apiKey) {
-				res.writeHead(400, { "Content-Type": "text/plain" });
-				res.end("Missing api_key");
+			if (!token) {
+				res.writeHead(400, { "Content-Type": "text/html" });
+				res.end(errorHtml(`Missing ${tokenParam}`));
 				cleanup();
-				resolve({ success: false, error: "No api_key received" });
+				resolve({ success: false, error: `No ${tokenParam} received` });
 				return;
 			}
 
 			// Save the token
-			onSaveToken(apiKey);
+			onSaveToken(token);
 
 			res.writeHead(200, { "Content-Type": "text/html" });
-			res.end(`<!DOCTYPE html>
+			res.end(successHtml());
+
+			cleanup();
+			resolve({ success: true, email: email || undefined });
+		});
+
+		// Listen on random port, loopback only
+		server.listen(0, "127.0.0.1", () => {
+			const addr = server.address();
+			/* c8 ignore next 4 -- defensive: server.address() can return string on pipe */
+			if (!addr || typeof addr === "string") {
+				cleanup();
+				resolve({ success: false, error: "Failed to start local server" });
+				return;
+			}
+
+			const callbackUrl = `http://127.0.0.1:${addr.port}/callback`;
+			const loginUrl = `${apiUrl}${loginPath}?callback=${encodeURIComponent(callbackUrl)}`;
+
+			openBrowser(loginUrl).catch(() => {
+				// Browser failed — print URL so user can open manually
+				if (log) {
+					log(`Could not open browser. Open this URL manually:\n  ${loginUrl}`);
+				}
+			});
+		});
+
+		/* c8 ignore next 3 -- defensive: server error is rare */
+		server.on("error", (err) => {
+			cleanup();
+			resolve({ success: false, error: `Local server error: ${err.message}` });
+		});
+
+		// Timeout
+		const timer = setTimeout(() => {
+			cleanup();
+			resolve({
+				success: false,
+				error: "Login timeout — no response received",
+			});
+		}, timeoutMs);
+
+		function cleanup() {
+			clearTimeout(timer);
+			server.close();
+		}
+	});
+}
+
+// ---------------------------------------------------------------------------
+// HTML templates for callback responses (basalt design system)
+// ---------------------------------------------------------------------------
+
+function successHtml(): string {
+	return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -144,51 +216,75 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
     <p class="hint">You can close this window.</p>
   </div>
 </body>
-</html>`);
+</html>`;
+}
 
-			cleanup();
-			resolve({ success: true, email: email || undefined });
-		});
-
-		// Listen on random port, loopback only
-		server.listen(0, "127.0.0.1", () => {
-			const addr = server.address();
-			/* c8 ignore next 4 -- defensive: server.address() can return string on pipe */
-			if (!addr || typeof addr === "string") {
-				cleanup();
-				resolve({ success: false, error: "Failed to start local server" });
-				return;
-			}
-
-			const callbackUrl = `http://127.0.0.1:${addr.port}/callback`;
-			const loginUrl = `${apiUrl}/api/auth/cli?callback=${encodeURIComponent(callbackUrl)}`;
-
-			openBrowser(loginUrl).catch(() => {
-				// Browser failed — print URL so user can open manually
-				if (log) {
-					log(`Could not open browser. Open this URL manually:\n  ${loginUrl}`);
-				}
-			});
-		});
-
-		/* c8 ignore next 3 -- defensive: server error is rare */
-		server.on("error", (err) => {
-			cleanup();
-			resolve({ success: false, error: `Local server error: ${err.message}` });
-		});
-
-		// Timeout
-		const timer = setTimeout(() => {
-			cleanup();
-			resolve({
-				success: false,
-				error: "Login timeout — no response received",
-			});
-		}, timeoutMs);
-
-		function cleanup() {
-			clearTimeout(timer);
-			server.close();
-		}
-	});
+function errorHtml(message: string): string {
+	const escaped = escapeHtml(message);
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Failed</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #171717;
+      color: #e5e5e5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1.5rem;
+      background: #1f1f1f;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon svg {
+      width: 32px;
+      height: 32px;
+      color: #ef4444;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #fafafa;
+    }
+    p {
+      font-size: 0.875rem;
+      color: #737373;
+      margin-bottom: 1.5rem;
+    }
+    .hint {
+      font-size: 0.75rem;
+      color: #525252;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </div>
+    <h1>Login Failed</h1>
+    <p>${escaped}</p>
+    <p class="hint">Please try again.</p>
+  </div>
+</body>
+</html>`;
 }

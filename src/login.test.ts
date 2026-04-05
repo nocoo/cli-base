@@ -235,5 +235,139 @@ describe("login", () => {
 
 			await loginPromise;
 		});
+
+		it("uses custom tokenParam when specified", async () => {
+			const openBrowser = vi.fn().mockResolvedValue(undefined);
+			const onSaveToken = vi.fn();
+
+			const loginPromise = performLogin({
+				openBrowser,
+				onSaveToken,
+				apiUrl: "https://example.com",
+				timeoutMs: 5000,
+				tokenParam: "token",
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			const url = openBrowser.mock.calls[0][0] as string;
+			const callbackMatch = url.match(/callback=([^&]+)/);
+			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+			const callbackParsed = new URL(callbackUrl);
+			const port = callbackParsed.port;
+
+			// Make callback with custom token param
+			await new Promise<void>((resolve, reject) => {
+				const req = http.request(
+					{
+						hostname: "127.0.0.1",
+						port: Number(port),
+						path: "/callback?token=custom-token",
+						method: "GET",
+					},
+					(res) => {
+						expect(res.statusCode).toBe(200);
+						resolve();
+					},
+				);
+				req.on("error", reject);
+				req.end();
+			});
+
+			const result = await loginPromise;
+			expect(result.success).toBe(true);
+			expect(onSaveToken).toHaveBeenCalledWith("custom-token");
+		});
+
+		it("uses custom loginPath when specified", async () => {
+			const openBrowser = vi.fn().mockResolvedValue(undefined);
+			const onSaveToken = vi.fn();
+
+			const loginPromise = performLogin({
+				openBrowser,
+				onSaveToken,
+				apiUrl: "https://example.com",
+				timeoutMs: 5000,
+				loginPath: "/cli/connect",
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			const url = openBrowser.mock.calls[0][0] as string;
+			expect(url).toContain("/cli/connect");
+			expect(url).not.toContain("/api/auth/cli");
+
+			// Complete the login
+			const callbackMatch = url.match(/callback=([^&]+)/);
+			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+			const callbackParsed = new URL(callbackUrl);
+			const port = callbackParsed.port;
+
+			await new Promise<void>((resolve) => {
+				const req = http.request(
+					{
+						hostname: "127.0.0.1",
+						port: Number(port),
+						path: "/callback?api_key=token",
+						method: "GET",
+					},
+					() => resolve(),
+				);
+				req.end();
+			});
+
+			await loginPromise;
+		});
+
+		it("returns error HTML when token missing with custom param name", async () => {
+			const openBrowser = vi.fn().mockResolvedValue(undefined);
+			const onSaveToken = vi.fn();
+
+			const loginPromise = performLogin({
+				openBrowser,
+				onSaveToken,
+				apiUrl: "https://example.com",
+				timeoutMs: 5000,
+				tokenParam: "custom_token",
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			const url = openBrowser.mock.calls[0][0] as string;
+			const callbackMatch = url.match(/callback=([^&]+)/);
+			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+			const callbackParsed = new URL(callbackUrl);
+			const port = callbackParsed.port;
+
+			// Make callback without the custom token param
+			await new Promise<void>((resolve) => {
+				const req = http.request(
+					{
+						hostname: "127.0.0.1",
+						port: Number(port),
+						path: "/callback",
+						method: "GET",
+					},
+					(res) => {
+						let data = "";
+						res.on("data", (chunk) => {
+							data += chunk;
+						});
+						res.on("end", () => {
+							expect(res.statusCode).toBe(400);
+							expect(data).toContain("Login Failed");
+							expect(data).toContain("custom_token");
+							resolve();
+						});
+					},
+				);
+				req.on("error", () => resolve());
+				req.end();
+			});
+
+			const result = await loginPromise;
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("custom_token");
+		});
 	});
 });
