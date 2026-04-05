@@ -8,6 +8,7 @@ export default defineConfig({
       exclude: [
         "**/*.test.ts",
         "dist/**",
+        "scripts/**",
         "vitest.config.ts",
         "src/index.ts", // pure re-exports
       ],

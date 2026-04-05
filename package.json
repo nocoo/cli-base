@@ -15,7 +15,8 @@
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit && biome check src/",
     "lint:fix": "biome check --write src/",
-    "prepare": "husky"
+    "prepare": "husky",
+    "release": "bun scripts/release.ts"
   },
   "dependencies": {
     "citty": "^0.2.2",
