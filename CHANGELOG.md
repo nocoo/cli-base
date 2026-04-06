@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.7] - 2026-04-06
+
+### Features
+
+- add createUpdateCommand for standard CLI update command
+- add CSRF state nonce protection
+- add configurable tokenParam and loginPath options
+- add automated release script
+- initial CLI base library
+
+### Fixes
+
+- publish compiled JS instead of TypeScript source
+- avoid exactOptionalPropertyTypes conflict
+- include all source files in npm package
+
 ## [0.1.2] - 2026-04-06
 
 ### Features
