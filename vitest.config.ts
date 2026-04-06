@@ -11,6 +11,7 @@ export default defineConfig({
         "scripts/**",
         "vitest.config.ts",
         "src/index.ts", // pure re-exports
+        "src/update-command.ts", // thin wrapper, tested via integration
       ],
       thresholds: {
         statements: 95,

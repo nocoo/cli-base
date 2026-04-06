@@ -25,6 +25,10 @@ export {
 	getUpdateCommand,
 	type PackageManager,
 } from "./update.js";
+export {
+	createUpdateCommand,
+	type UpdateCommandOptions,
+} from "./update-command.js";
 export { readVersion, compareVersions, isNewerVersion } from "./version.js";
 export { getBrowserCommand, openBrowser } from "./browser.js";
 
