@@ -3,7 +3,7 @@
  */
 
 import http from "node:http";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	type LoginDeps,
 	defaultGenerateNonce,
@@ -58,43 +58,52 @@ describe("login", () => {
 	});
 
 	describe("performLogin", () => {
-		it("starts a local server and opens browser", async () => {
+		// Helper to extract state from URL
+		function extractState(url: string): string {
+			const match = url.match(/state=([^&]+)/);
+			return match ? decodeURIComponent(match[1]) : "";
+		}
+
+		// Helper to extract callback URL from browser URL
+		function extractCallbackUrl(url: string): string {
+			const match = url.match(/callback=([^&]+)/);
+			return match ? decodeURIComponent(match[1]) : "";
+		}
+
+		it("starts a local server and opens browser with state", async () => {
 			const openBrowser = vi.fn().mockResolvedValue(undefined);
 			const onSaveToken = vi.fn();
+			const testState = "test-state-123";
 
-			// Start the login flow
 			const loginPromise = performLogin({
 				openBrowser,
 				onSaveToken,
 				apiUrl: "https://example.com",
 				timeoutMs: 5000,
+				generateNonce: () => testState,
 			});
 
-			// Wait for server to start
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
-			// Verify browser was opened with correct URL
 			expect(openBrowser).toHaveBeenCalledTimes(1);
 			const url = openBrowser.mock.calls[0][0] as string;
 			expect(url).toContain("https://example.com");
 			expect(url).toContain("/api/auth/cli");
 			expect(url).toContain("callback=");
+			expect(url).toContain(`state=${testState}`);
 
-			// Extract callback URL and simulate callback
-			const callbackMatch = url.match(/callback=([^&]+)/);
-			expect(callbackMatch).toBeTruthy();
-			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
-
-			// Make callback request
+			// Extract callback URL and port
+			const callbackUrl = extractCallbackUrl(url);
 			const callbackParsed = new URL(callbackUrl);
 			const port = callbackParsed.port;
 
+			// Make callback request with correct state
 			await new Promise<void>((resolve, reject) => {
 				const req = http.request(
 					{
-						hostname: "127.0.0.1",
+						hostname: "localhost",
 						port: Number(port),
-						path: "/callback?api_key=test-token&email=test@example.com",
+						path: `/callback?api_key=test-token&email=test@example.com&state=${testState}`,
 						method: "GET",
 					},
 					(res) => {
@@ -113,7 +122,6 @@ describe("login", () => {
 				req.end();
 			});
 
-			// Wait for login to complete
 			const result = await loginPromise;
 
 			expect(result.success).toBe(true);
@@ -124,29 +132,30 @@ describe("login", () => {
 		it("returns error when callback has no api_key", async () => {
 			const openBrowser = vi.fn().mockResolvedValue(undefined);
 			const onSaveToken = vi.fn();
+			const testState = "test-state-456";
 
 			const loginPromise = performLogin({
 				openBrowser,
 				onSaveToken,
 				apiUrl: "https://example.com",
 				timeoutMs: 5000,
+				generateNonce: () => testState,
 			});
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const url = openBrowser.mock.calls[0][0] as string;
-			const callbackMatch = url.match(/callback=([^&]+)/);
-			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+			const callbackUrl = extractCallbackUrl(url);
 			const callbackParsed = new URL(callbackUrl);
 			const port = callbackParsed.port;
 
-			// Make callback without api_key
+			// Make callback without api_key but with state
 			await new Promise<void>((resolve) => {
 				const req = http.request(
 					{
-						hostname: "127.0.0.1",
+						hostname: "localhost",
 						port: Number(port),
-						path: "/callback",
+						path: `/callback?state=${testState}`,
 						method: "GET",
 					},
 					(res) => {
@@ -203,19 +212,20 @@ describe("login", () => {
 		it("returns 404 for non-callback paths", async () => {
 			const openBrowser = vi.fn().mockResolvedValue(undefined);
 			const onSaveToken = vi.fn();
+			const testState = "test-state-789";
 
 			const loginPromise = performLogin({
 				openBrowser,
 				onSaveToken,
 				apiUrl: "https://example.com",
 				timeoutMs: 5000,
+				generateNonce: () => testState,
 			});
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const url = openBrowser.mock.calls[0][0] as string;
-			const callbackMatch = url.match(/callback=([^&]+)/);
-			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+			const callbackUrl = extractCallbackUrl(url);
 			const callbackParsed = new URL(callbackUrl);
 			const port = callbackParsed.port;
 
@@ -223,7 +233,7 @@ describe("login", () => {
 			await new Promise<void>((resolve) => {
 				const req = http.request(
 					{
-						hostname: "127.0.0.1",
+						hostname: "localhost",
 						port: Number(port),
 						path: "/other",
 						method: "GET",
@@ -241,9 +251,9 @@ describe("login", () => {
 			await new Promise<void>((resolve) => {
 				const req = http.request(
 					{
-						hostname: "127.0.0.1",
+						hostname: "localhost",
 						port: Number(port),
-						path: "/callback?api_key=token",
+						path: `/callback?api_key=token&state=${testState}`,
 						method: "GET",
 					},
 					() => resolve(),
@@ -257,6 +267,7 @@ describe("login", () => {
 		it("uses custom tokenParam when specified", async () => {
 			const openBrowser = vi.fn().mockResolvedValue(undefined);
 			const onSaveToken = vi.fn();
+			const testState = "test-state-custom";
 
 			const loginPromise = performLogin({
 				openBrowser,
@@ -264,13 +275,13 @@ describe("login", () => {
 				apiUrl: "https://example.com",
 				timeoutMs: 5000,
 				tokenParam: "token",
+				generateNonce: () => testState,
 			});
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const url = openBrowser.mock.calls[0][0] as string;
-			const callbackMatch = url.match(/callback=([^&]+)/);
-			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+			const callbackUrl = extractCallbackUrl(url);
 			const callbackParsed = new URL(callbackUrl);
 			const port = callbackParsed.port;
 
@@ -278,9 +289,9 @@ describe("login", () => {
 			await new Promise<void>((resolve, reject) => {
 				const req = http.request(
 					{
-						hostname: "127.0.0.1",
+						hostname: "localhost",
 						port: Number(port),
-						path: "/callback?token=custom-token",
+						path: `/callback?token=custom-token&state=${testState}`,
 						method: "GET",
 					},
 					(res) => {
@@ -300,6 +311,7 @@ describe("login", () => {
 		it("uses custom loginPath when specified", async () => {
 			const openBrowser = vi.fn().mockResolvedValue(undefined);
 			const onSaveToken = vi.fn();
+			const testState = "test-state-path";
 
 			const loginPromise = performLogin({
 				openBrowser,
@@ -307,6 +319,7 @@ describe("login", () => {
 				apiUrl: "https://example.com",
 				timeoutMs: 5000,
 				loginPath: "/cli/connect",
+				generateNonce: () => testState,
 			});
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
@@ -316,17 +329,16 @@ describe("login", () => {
 			expect(url).not.toContain("/api/auth/cli");
 
 			// Complete the login
-			const callbackMatch = url.match(/callback=([^&]+)/);
-			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+			const callbackUrl = extractCallbackUrl(url);
 			const callbackParsed = new URL(callbackUrl);
 			const port = callbackParsed.port;
 
 			await new Promise<void>((resolve) => {
 				const req = http.request(
 					{
-						hostname: "127.0.0.1",
+						hostname: "localhost",
 						port: Number(port),
-						path: "/callback?api_key=token",
+						path: `/callback?api_key=token&state=${testState}`,
 						method: "GET",
 					},
 					() => resolve(),
@@ -340,6 +352,7 @@ describe("login", () => {
 		it("returns error HTML when token missing with custom param name", async () => {
 			const openBrowser = vi.fn().mockResolvedValue(undefined);
 			const onSaveToken = vi.fn();
+			const testState = "test-state-param";
 
 			const loginPromise = performLogin({
 				openBrowser,
@@ -347,23 +360,23 @@ describe("login", () => {
 				apiUrl: "https://example.com",
 				timeoutMs: 5000,
 				tokenParam: "custom_token",
+				generateNonce: () => testState,
 			});
 
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const url = openBrowser.mock.calls[0][0] as string;
-			const callbackMatch = url.match(/callback=([^&]+)/);
-			const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+			const callbackUrl = extractCallbackUrl(url);
 			const callbackParsed = new URL(callbackUrl);
 			const port = callbackParsed.port;
 
-			// Make callback without the custom token param
+			// Make callback without the custom token param (but with state)
 			await new Promise<void>((resolve) => {
 				const req = http.request(
 					{
-						hostname: "127.0.0.1",
+						hostname: "localhost",
 						port: Number(port),
-						path: "/callback",
+						path: `/callback?state=${testState}`,
 						method: "GET",
 					},
 					(res) => {
@@ -389,7 +402,7 @@ describe("login", () => {
 		});
 
 		describe("CSRF state nonce", () => {
-			it("includes state in URL when useStateNonce is true", async () => {
+			it("always includes state in URL", async () => {
 				const openBrowser = vi.fn().mockResolvedValue(undefined);
 				const onSaveToken = vi.fn();
 
@@ -398,7 +411,6 @@ describe("login", () => {
 					onSaveToken,
 					apiUrl: "https://example.com",
 					timeoutMs: 5000,
-					useStateNonce: true,
 					generateNonce: () => "test-nonce-123",
 				});
 
@@ -408,15 +420,14 @@ describe("login", () => {
 				expect(url).toContain("state=test-nonce-123");
 
 				// Complete the login with matching state
-				const callbackMatch = url.match(/callback=([^&]+)/);
-				const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+				const callbackUrl = extractCallbackUrl(url);
 				const callbackParsed = new URL(callbackUrl);
 				const port = callbackParsed.port;
 
 				await new Promise<void>((resolve) => {
 					const req = http.request(
 						{
-							hostname: "127.0.0.1",
+							hostname: "localhost",
 							port: Number(port),
 							path: "/callback?api_key=token&state=test-nonce-123",
 							method: "GET",
@@ -439,15 +450,13 @@ describe("login", () => {
 					onSaveToken,
 					apiUrl: "https://example.com",
 					timeoutMs: 5000,
-					useStateNonce: true,
 					generateNonce: () => "expected-state",
 				});
 
 				await new Promise((resolve) => setTimeout(resolve, 100));
 
 				const url = openBrowser.mock.calls[0][0] as string;
-				const callbackMatch = url.match(/callback=([^&]+)/);
-				const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+				const callbackUrl = extractCallbackUrl(url);
 				const callbackParsed = new URL(callbackUrl);
 				const port = callbackParsed.port;
 
@@ -455,7 +464,7 @@ describe("login", () => {
 				await new Promise<void>((resolve) => {
 					const req = http.request(
 						{
-							hostname: "127.0.0.1",
+							hostname: "localhost",
 							port: Number(port),
 							path: "/callback?api_key=token&state=wrong-state",
 							method: "GET",
@@ -484,15 +493,13 @@ describe("login", () => {
 					onSaveToken,
 					apiUrl: "https://example.com",
 					timeoutMs: 5000,
-					useStateNonce: true,
 					generateNonce: () => "expected-state",
 				});
 
 				await new Promise((resolve) => setTimeout(resolve, 100));
 
 				const url = openBrowser.mock.calls[0][0] as string;
-				const callbackMatch = url.match(/callback=([^&]+)/);
-				const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+				const callbackUrl = extractCallbackUrl(url);
 				const callbackParsed = new URL(callbackUrl);
 				const port = callbackParsed.port;
 
@@ -500,7 +507,7 @@ describe("login", () => {
 				await new Promise<void>((resolve) => {
 					const req = http.request(
 						{
-							hostname: "127.0.0.1",
+							hostname: "localhost",
 							port: Number(port),
 							path: "/callback?api_key=token",
 							method: "GET",
@@ -518,39 +525,94 @@ describe("login", () => {
 				expect(result.success).toBe(false);
 				expect(result.error).toContain("CSRF");
 			});
+		});
 
-			it("does not include state when useStateNonce is false", async () => {
+		describe("accent color", () => {
+			it("uses default gold accent color", async () => {
 				const openBrowser = vi.fn().mockResolvedValue(undefined);
 				const onSaveToken = vi.fn();
+				const testState = "test-state-color";
 
 				const loginPromise = performLogin({
 					openBrowser,
 					onSaveToken,
 					apiUrl: "https://example.com",
 					timeoutMs: 5000,
-					useStateNonce: false,
+					generateNonce: () => testState,
 				});
 
 				await new Promise((resolve) => setTimeout(resolve, 100));
 
 				const url = openBrowser.mock.calls[0][0] as string;
-				expect(url).not.toContain("state=");
-
-				// Complete without state
-				const callbackMatch = url.match(/callback=([^&]+)/);
-				const callbackUrl = decodeURIComponent(callbackMatch?.[1] ?? "");
+				const callbackUrl = extractCallbackUrl(url);
 				const callbackParsed = new URL(callbackUrl);
 				const port = callbackParsed.port;
 
 				await new Promise<void>((resolve) => {
 					const req = http.request(
 						{
-							hostname: "127.0.0.1",
+							hostname: "localhost",
 							port: Number(port),
-							path: "/callback?api_key=token",
+							path: `/callback?api_key=token&state=${testState}`,
 							method: "GET",
 						},
-						() => resolve(),
+						(res) => {
+							let data = "";
+							res.on("data", (chunk) => {
+								data += chunk;
+							});
+							res.on("end", () => {
+								expect(data).toContain("#c9a227"); // default gold
+								resolve();
+							});
+						},
+					);
+					req.end();
+				});
+
+				await loginPromise;
+			});
+
+			it("uses custom accent color when specified", async () => {
+				const openBrowser = vi.fn().mockResolvedValue(undefined);
+				const onSaveToken = vi.fn();
+				const testState = "test-state-custom-color";
+
+				const loginPromise = performLogin({
+					openBrowser,
+					onSaveToken,
+					apiUrl: "https://example.com",
+					timeoutMs: 5000,
+					generateNonce: () => testState,
+					accentColor: "#22c55e", // green
+				});
+
+				await new Promise((resolve) => setTimeout(resolve, 100));
+
+				const url = openBrowser.mock.calls[0][0] as string;
+				const callbackUrl = extractCallbackUrl(url);
+				const callbackParsed = new URL(callbackUrl);
+				const port = callbackParsed.port;
+
+				await new Promise<void>((resolve) => {
+					const req = http.request(
+						{
+							hostname: "localhost",
+							port: Number(port),
+							path: `/callback?api_key=token&state=${testState}`,
+							method: "GET",
+						},
+						(res) => {
+							let data = "";
+							res.on("data", (chunk) => {
+								data += chunk;
+							});
+							res.on("end", () => {
+								expect(data).toContain("#22c55e");
+								expect(data).not.toContain("#c9a227");
+								resolve();
+							});
+						},
 					);
 					req.end();
 				});

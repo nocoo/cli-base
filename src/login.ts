@@ -38,16 +38,15 @@ export interface LoginDeps {
 	 */
 	loginPath?: string;
 	/**
-	 * Enable CSRF state nonce validation.
-	 * When true, a random state is generated and must be returned by the callback.
-	 * Defaults to false for backward compatibility.
-	 */
-	useStateNonce?: boolean;
-	/**
 	 * Custom nonce generator for testing.
-	 * Only used when useStateNonce is true.
 	 */
 	generateNonce?: () => string;
+	/**
+	 * Theme accent color for the success page checkmark icon.
+	 * Accepts any valid CSS color (hex, rgb, hsl, named colors).
+	 * Defaults to "#c9a227" (gold).
+	 */
+	accentColor?: string;
 }
 
 export interface LoginResult {
@@ -91,12 +90,12 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			log,
 			tokenParam = "api_key",
 			loginPath = "/api/auth/cli",
-			useStateNonce = false,
 			generateNonce = defaultGenerateNonce,
+			accentColor = "#c9a227",
 		} = deps;
 
-		// Generate state nonce if CSRF protection is enabled
-		const expectedState = useStateNonce ? generateNonce() : null;
+		// Always generate state nonce for CSRF protection
+		const expectedState = generateNonce();
 
 		const server = http.createServer((req, res) => {
 			const url = new URL(req.url ?? "/", "http://localhost");
@@ -107,23 +106,21 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 				return;
 			}
 
-			// Validate CSRF state nonce if enabled
-			if (expectedState !== null) {
-				const state = url.searchParams.get("state");
-				if (state !== expectedState) {
-					res.writeHead(403, { "Content-Type": "text/html" });
-					res.end(
-						errorHtml(
-							"Invalid or missing state parameter. This may be a forged request.",
-						),
-					);
-					cleanup();
-					resolve({
-						success: false,
-						error: "State mismatch — possible CSRF attempt",
-					});
-					return;
-				}
+			// Validate CSRF state nonce
+			const state = url.searchParams.get("state");
+			if (state !== expectedState) {
+				res.writeHead(403, { "Content-Type": "text/html" });
+				res.end(
+					errorHtml(
+						"Invalid or missing state parameter. This may be a forged request.",
+					),
+				);
+				cleanup();
+				resolve({
+					success: false,
+					error: "State mismatch — possible CSRF attempt",
+				});
+				return;
 			}
 
 			const token = url.searchParams.get(tokenParam);
@@ -141,7 +138,7 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			onSaveToken(token);
 
 			res.writeHead(200, { "Content-Type": "text/html" });
-			res.end(successHtml());
+			res.end(successHtml(accentColor));
 
 			cleanup();
 			const result: LoginResult = { success: true };
@@ -151,8 +148,12 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			resolve(result);
 		});
 
-		// Listen on random port, loopback only
-		server.listen(0, "127.0.0.1", () => {
+		// Listen on random port, loopback only.
+		// Use "localhost" (not "127.0.0.1") so the callback URL matches however
+		// the OS resolves localhost (IPv4 127.0.0.1 or IPv6 ::1). On some Macs
+		// localhost resolves to ::1, and binding to "127.0.0.1" while redirecting
+		// the browser to "127.0.0.1" can fail because the browser tries ::1 first.
+		server.listen(0, "localhost", () => {
 			const addr = server.address();
 			/* c8 ignore next 4 -- defensive: server.address() can return string on pipe */
 			if (!addr || typeof addr === "string") {
@@ -161,13 +162,8 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 				return;
 			}
 
-			const callbackUrl = `http://127.0.0.1:${addr.port}/callback`;
-			let loginUrl = `${apiUrl}${loginPath}?callback=${encodeURIComponent(callbackUrl)}`;
-
-			// Append state parameter if CSRF protection is enabled
-			if (expectedState !== null) {
-				loginUrl += `&state=${encodeURIComponent(expectedState)}`;
-			}
+			const callbackUrl = `http://localhost:${addr.port}/callback`;
+			const loginUrl = `${apiUrl}${loginPath}?callback=${encodeURIComponent(callbackUrl)}&state=${encodeURIComponent(expectedState)}`;
 
 			openBrowser(loginUrl).catch(() => {
 				// Browser failed — print URL so user can open manually
@@ -203,7 +199,9 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 // HTML templates for callback responses (basalt design system)
 // ---------------------------------------------------------------------------
 
-function successHtml(): string {
+function successHtml(accentColor: string): string {
+	// Escape the color to prevent XSS (though it should be a safe CSS color)
+	const safeColor = escapeHtml(accentColor);
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -238,7 +236,7 @@ function successHtml(): string {
     .icon svg {
       width: 32px;
       height: 32px;
-      color: #c9a227;
+      color: ${safeColor};
     }
     h1 {
       font-size: 1.5rem;

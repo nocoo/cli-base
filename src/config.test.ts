@@ -210,4 +210,94 @@ describe("ConfigManager", () => {
 			expect(manager.get("token")).toBe("new-value");
 		});
 	});
+
+	describe("ensureDeviceId", () => {
+		it("generates a new device ID when none exists", async () => {
+			const manager = new ConfigManager<{ token?: string }>(testDir);
+			const deviceId = await manager.ensureDeviceId();
+
+			expect(deviceId).toMatch(
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+			);
+		});
+
+		it("returns existing device ID from device.json", async () => {
+			const manager = new ConfigManager<{ token?: string }>(testDir);
+
+			// First call generates
+			const deviceId1 = await manager.ensureDeviceId();
+			// Second call returns same
+			const deviceId2 = await manager.ensureDeviceId();
+
+			expect(deviceId1).toBe(deviceId2);
+		});
+
+		it("migrates legacy deviceId from config to device.json", async () => {
+			const manager = new ConfigManager<{ token?: string; deviceId?: string }>(
+				testDir,
+			);
+
+			// Write config with legacy deviceId
+			manager.write({ token: "test", deviceId: "legacy-device-id" });
+
+			const deviceId = await manager.ensureDeviceId();
+
+			expect(deviceId).toBe("legacy-device-id");
+
+			// Verify deviceId removed from config
+			const config = manager.read();
+			expect(config.deviceId).toBeUndefined();
+			expect(config.token).toBe("test");
+
+			// Verify device.json was created
+			const devicePath = join(testDir, "device.json");
+			expect(existsSync(devicePath)).toBe(true);
+			const deviceData = JSON.parse(readFileSync(devicePath, "utf-8"));
+			expect(deviceData.deviceId).toBe("legacy-device-id");
+		});
+
+		it("uses custom device filename", async () => {
+			const manager = new ConfigManager<{ token?: string }>(testDir, false, {
+				deviceFilename: "my-device.json",
+			});
+
+			await manager.ensureDeviceId();
+
+			const devicePath = join(testDir, "my-device.json");
+			expect(existsSync(devicePath)).toBe(true);
+		});
+
+		it("shares device ID between dev and prod configs", async () => {
+			const prodManager = new ConfigManager<{ token?: string }>(testDir, false);
+			const devManager = new ConfigManager<{ token?: string }>(testDir, true);
+
+			const prodDeviceId = await prodManager.ensureDeviceId();
+			const devDeviceId = await devManager.ensureDeviceId();
+
+			expect(prodDeviceId).toBe(devDeviceId);
+		});
+	});
+
+	describe("getDeviceId", () => {
+		it("returns undefined when device.json does not exist", () => {
+			const manager = new ConfigManager<{ token?: string }>(testDir);
+			expect(manager.getDeviceId()).toBeUndefined();
+		});
+
+		it("returns device ID when device.json exists", async () => {
+			const manager = new ConfigManager<{ token?: string }>(testDir);
+			const ensuredId = await manager.ensureDeviceId();
+
+			expect(manager.getDeviceId()).toBe(ensuredId);
+		});
+
+		it("returns undefined for corrupted device.json", () => {
+			const manager = new ConfigManager<{ token?: string }>(testDir);
+			mkdirSync(testDir, { recursive: true });
+			const fs = require("node:fs");
+			fs.writeFileSync(join(testDir, "device.json"), "invalid json", "utf-8");
+
+			expect(manager.getDeviceId()).toBeUndefined();
+		});
+	});
 });
