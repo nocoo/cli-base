@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-04-07
+
+### Features
+
+- mandatory CSRF, macOS localhost compatibility, accent color, ensureDeviceId
+- add createUpdateCommand for standard CLI update command
+- add CSRF state nonce protection
+- add configurable tokenParam and loginPath options
+- add automated release script
+- initial CLI base library
+
+### Fixes
+
+- Windows start command treats quoted URL as window title
+- publish compiled JS instead of TypeScript source
+- avoid exactOptionalPropertyTypes conflict
+- include all source files in npm package
+
 ## [0.1.7] - 2026-04-06
 
 ### Features
