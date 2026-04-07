@@ -34,7 +34,11 @@ export async function openBrowser(url: string, execFn?: ExecFn): Promise<void> {
 	const cmd = getBrowserCommand();
 
 	return new Promise((resolve, reject) => {
-		exec(`${cmd} "${url}"`, (error) => {
+		// On Windows, 'start' command treats the first quoted argument as window title.
+		// We must pass an empty title ("") before the URL.
+		const fullCmd =
+			process.platform === "win32" ? `${cmd} "" "${url}"` : `${cmd} "${url}"`;
+		exec(fullCmd, (error) => {
 			if (error) reject(error);
 			else resolve();
 		});

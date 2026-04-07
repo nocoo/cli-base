@@ -97,5 +97,71 @@ describe("browser", () => {
 			const cmd = mockExec.mock.calls[0][0] as string;
 			expect(cmd).toContain("https://example.com/callback?code=abc&state=xyz");
 		});
+
+		describe("Windows-specific behavior", () => {
+			const originalPlatform = process.platform;
+
+			beforeEach(() => {
+				Object.defineProperty(process, "platform", { value: "win32" });
+			});
+
+			afterEach(() => {
+				Object.defineProperty(process, "platform", { value: originalPlatform });
+			});
+
+			it("uses empty title before URL to avoid start command quirk", async () => {
+				const mockExec = vi.fn(
+					(
+						_cmd: string,
+						callback: (
+							error: Error | null,
+							stdout: string,
+							stderr: string,
+						) => void,
+					) => {
+						callback(null, "", "");
+					},
+				);
+
+				await openBrowser("https://example.com/auth?code=abc", mockExec);
+
+				const cmd = mockExec.mock.calls[0][0] as string;
+				// Windows 'start' treats first quoted arg as window title.
+				// Must use: start "" "url" (empty title before URL)
+				expect(cmd).toBe('start "" "https://example.com/auth?code=abc"');
+			});
+		});
+
+		describe("non-Windows behavior", () => {
+			const originalPlatform = process.platform;
+
+			beforeEach(() => {
+				Object.defineProperty(process, "platform", { value: "darwin" });
+			});
+
+			afterEach(() => {
+				Object.defineProperty(process, "platform", { value: originalPlatform });
+			});
+
+			it("does not add empty title on macOS", async () => {
+				const mockExec = vi.fn(
+					(
+						_cmd: string,
+						callback: (
+							error: Error | null,
+							stdout: string,
+							stderr: string,
+						) => void,
+					) => {
+						callback(null, "", "");
+					},
+				);
+
+				await openBrowser("https://example.com", mockExec);
+
+				const cmd = mockExec.mock.calls[0][0] as string;
+				expect(cmd).toBe('open "https://example.com"');
+			});
+		});
 	});
 });
