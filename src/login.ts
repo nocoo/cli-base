@@ -148,12 +148,40 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			resolve(result);
 		});
 
-		// Listen on random port, loopback only.
-		// Use "localhost" (not "127.0.0.1") so the callback URL matches however
-		// the OS resolves localhost (IPv4 127.0.0.1 or IPv6 ::1). On some Macs
-		// localhost resolves to ::1, and binding to "127.0.0.1" while redirecting
-		// the browser to "127.0.0.1" can fail because the browser tries ::1 first.
-		server.listen(0, "localhost", () => {
+		// Track which hostname we successfully bound to
+		let boundHost: string;
+
+		// Try binding to "localhost" first, fallback to "127.0.0.1" on error.
+		// On most systems, "localhost" works and matches browser resolution.
+		// In IPv6-restricted environments (sandboxes, some CI), localhost may
+		// resolve to ::1 which fails with EPERM/EADDRNOTAVAIL — fall back to IPv4.
+		function tryListen(host: string, fallbackHost?: string) {
+			server.listen(0, host, () => {
+				boundHost = host;
+				onListening();
+			});
+
+			server.once("error", (err: NodeJS.ErrnoException) => {
+				if (
+					fallbackHost &&
+					(err.code === "EPERM" ||
+						err.code === "EADDRNOTAVAIL" ||
+						err.code === "EAFNOSUPPORT")
+				) {
+					// IPv6 not available, try IPv4
+					server.removeAllListeners("error");
+					tryListen(fallbackHost);
+				} else {
+					cleanup();
+					resolve({
+						success: false,
+						error: `Local server error: ${err.message}`,
+					});
+				}
+			});
+		}
+
+		function onListening() {
 			const addr = server.address();
 			/* c8 ignore next 4 -- defensive: server.address() can return string on pipe */
 			if (!addr || typeof addr === "string") {
@@ -162,7 +190,7 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 				return;
 			}
 
-			const callbackUrl = `http://localhost:${addr.port}/callback`;
+			const callbackUrl = `http://${boundHost}:${addr.port}/callback`;
 			const loginUrl = `${apiUrl}${loginPath}?callback=${encodeURIComponent(callbackUrl)}&state=${encodeURIComponent(expectedState)}`;
 
 			openBrowser(loginUrl).catch(() => {
@@ -171,13 +199,10 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 					log(`Could not open browser. Open this URL manually:\n  ${loginUrl}`);
 				}
 			});
-		});
+		}
 
-		/* c8 ignore next 3 -- defensive: server error is rare */
-		server.on("error", (err) => {
-			cleanup();
-			resolve({ success: false, error: `Local server error: ${err.message}` });
-		});
+		// Start with localhost, fallback to 127.0.0.1
+		tryListen("localhost", "127.0.0.1");
 
 		// Timeout
 		const timer = setTimeout(() => {
