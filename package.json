@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "tsc --noEmit && biome check src/",
+    "lint": "tsc --noEmit && biome check --error-on-warnings src/",
     "lint:fix": "biome check --write src/",
     "prepare": "husky",
     "release": "bun scripts/release.ts"
