@@ -16,7 +16,8 @@
     "lint": "tsc --noEmit && biome check --error-on-warnings src/",
     "lint:fix": "biome check --write src/",
     "prepare": "husky",
-    "release": "bun scripts/release.ts"
+    "release": "bun scripts/release.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "citty": "^0.2.2",
@@ -43,5 +44,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/nocoo/cli-base.git"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json}": [
+      "biome check --error-on-warnings --no-errors-on-unmatched"
+    ]
   }
 }
