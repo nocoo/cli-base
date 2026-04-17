@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2026-04-18
+
+### Features
+
+- add params field to LoginResult
+
+### Fixes
+
+- 迁移到 base-ci@v2026，禁用 L2 E2E
+- update vite to fix CVEs
+
 ## [0.2.1] - 2026-04-07
 
 ### Features
