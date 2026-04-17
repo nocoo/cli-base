@@ -53,6 +53,11 @@ export interface LoginResult {
 	success: boolean;
 	email?: string;
 	error?: string;
+	/**
+	 * All query parameters from the callback URL.
+	 * Useful for extracting additional data beyond the token.
+	 */
+	params?: Record<string, string>;
 }
 
 /**
@@ -141,7 +146,14 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			res.end(successHtml(accentColor));
 
 			cleanup();
-			const result: LoginResult = { success: true };
+
+			// Build params object from all query parameters
+			const params: Record<string, string> = {};
+			for (const [key, value] of url.searchParams.entries()) {
+				params[key] = value;
+			}
+
+			const result: LoginResult = { success: true, params };
 			if (email) {
 				result.email = email;
 			}
