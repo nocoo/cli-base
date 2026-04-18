@@ -47,6 +47,11 @@ export interface LoginDeps {
 	 * Defaults to "#c9a227" (gold).
 	 */
 	accentColor?: string;
+	/**
+	 * Extra query parameters to append to the login URL.
+	 * Useful for passing client-side context (e.g., hostname) to the server.
+	 */
+	extraParams?: Record<string, string>;
 }
 
 export interface LoginResult {
@@ -97,6 +102,7 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			loginPath = "/api/auth/cli",
 			generateNonce = defaultGenerateNonce,
 			accentColor = "#c9a227",
+			extraParams = {},
 		} = deps;
 
 		// Always generate state nonce for CSRF protection
@@ -203,7 +209,15 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			}
 
 			const callbackUrl = `http://${boundHost}:${addr.port}/callback`;
-			const loginUrl = `${apiUrl}${loginPath}?callback=${encodeURIComponent(callbackUrl)}&state=${encodeURIComponent(expectedState)}`;
+
+			// Build login URL with callback, state, and extra params
+			const loginUrlObj = new URL(`${apiUrl}${loginPath}`);
+			loginUrlObj.searchParams.set("callback", callbackUrl);
+			loginUrlObj.searchParams.set("state", expectedState);
+			for (const [key, value] of Object.entries(extraParams)) {
+				loginUrlObj.searchParams.set(key, value);
+			}
+			const loginUrl = loginUrlObj.toString();
 
 			openBrowser(loginUrl).catch(() => {
 				// Browser failed — print URL so user can open manually
