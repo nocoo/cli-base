@@ -1,14 +1,6 @@
-#!/bin/sh
-
-# 6DQ Pre-commit: L1 (UT ≥95%) + G1 (Lint)
-echo "🔍 Running pre-commit checks..."
-
-# G1: Static analysis (tsc + biome)
-echo "📝 G1: Type checking..."
-bun run lint || exit 1
-
-# L1: Unit tests with coverage threshold (95%)
-echo "🧪 L1: Unit tests with coverage..."
-bunx vitest run --coverage || exit 1
-
-echo "✅ Pre-commit passed: L1 (UT ≥95%) + G1 (tsc + Biome)"
+# === Quality Gate: pre-commit ===
+# L1 + G1 + G2a (6DQ standard)
+bun run typecheck
+bun run lint
+bun run test
+gitleaks protect --staged --no-banner
