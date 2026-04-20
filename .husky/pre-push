@@ -12,3 +12,6 @@ else
 fi
 
 echo "✅ Pre-push passed: G2 (Security)"
+
+# G2b: dependency vulnerability scan
+osv-scanner scan --lockfile=bun.lock --config=osv-scanner.toml
