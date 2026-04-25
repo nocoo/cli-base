@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="logo.png" width="128" height="128"/>
-</p>
-
 <h1 align="center">cli-base</h1>
 
 <p align="center">
