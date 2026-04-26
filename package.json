@@ -23,6 +23,7 @@
     "citty": "^0.2.2",
     "consola": "^3.4.2",
     "picocolors": "^1.1.1",
+    "postcss": "^8.5.10",
     "yocto-spinner": "^1.1.0"
   },
   "devDependencies": {
@@ -49,5 +50,8 @@
     "*.{ts,tsx,js,jsx,json}": [
       "biome check --error-on-warnings --no-errors-on-unmatched"
     ]
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
   }
 }
