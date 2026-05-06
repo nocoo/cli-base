@@ -130,7 +130,7 @@ bun install
 
 | 命令 | 说明 |
 |------|------|
-| `bun test` | 运行测试 |
+| `vitest run` | 运行测试 |
 | `bun run test:coverage` | 运行测试并输出覆盖率 |
 | `bun run lint` | 类型检查 + Biome lint |
 | `bun run build` | 编译 TypeScript |
