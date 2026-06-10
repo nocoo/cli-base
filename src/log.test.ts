@@ -1,9 +1,4 @@
-/**
- * Tests for logging utilities.
- */
-
-import type { ConsolaInstance } from "consola";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createLogger, formatDate, formatDuration, formatSize } from "./log.js";
 
 describe("log", () => {

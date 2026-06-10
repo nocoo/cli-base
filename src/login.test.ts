@@ -4,12 +4,7 @@
 
 import http from "node:http";
 import { describe, expect, it, vi } from "vitest";
-import {
-	type LoginDeps,
-	defaultGenerateNonce,
-	escapeHtml,
-	performLogin,
-} from "./login.js";
+import { defaultGenerateNonce, escapeHtml, performLogin } from "./login.js";
 
 describe("login", () => {
 	describe("escapeHtml", () => {
@@ -59,7 +54,7 @@ describe("login", () => {
 
 	describe("performLogin", () => {
 		// Helper to extract state from URL
-		function extractState(url: string): string {
+		function _extractState(url: string): string {
 			const match = url.match(/state=([^&]+)/);
 			return match ? decodeURIComponent(match[1]) : "";
 		}
