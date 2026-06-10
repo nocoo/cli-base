@@ -23,7 +23,7 @@
     "citty": "^0.2.2",
     "consola": "^3.4.2",
     "picocolors": "^1.1.1",
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.15",
     "yocto-spinner": "^1.1.0"
   },
   "devDependencies": {
@@ -52,6 +52,6 @@
     ]
   },
   "overrides": {
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.15"
   }
 }
