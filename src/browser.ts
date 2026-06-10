@@ -30,6 +30,7 @@ export function getBrowserCommand(): string {
  * @param execFn - Optional exec function for testing (defaults to child_process.exec)
  */
 export async function openBrowser(url: string, execFn?: ExecFn): Promise<void> {
+	/* v8 ignore next -- @preserve real child_process default used in production only */
 	const exec = execFn ?? (await import("node:child_process")).exec;
 	const cmd = getBrowserCommand();
 

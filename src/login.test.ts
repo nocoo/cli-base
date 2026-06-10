@@ -527,6 +527,45 @@ describe("login", () => {
 			});
 		});
 
+		it("appends extraParams to the login URL", async () => {
+			const openBrowser = vi.fn().mockResolvedValue(undefined);
+			const onSaveToken = vi.fn();
+			const testState = "test-state-extras";
+
+			const loginPromise = performLogin({
+				openBrowser,
+				onSaveToken,
+				apiUrl: "https://example.com",
+				timeoutMs: 5000,
+				generateNonce: () => testState,
+				extraParams: { hostname: "alice-laptop", source: "cli" },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			const url = openBrowser.mock.calls[0][0] as string;
+			expect(url).toContain("hostname=alice-laptop");
+			expect(url).toContain("source=cli");
+
+			const callbackUrl = url.match(/callback=([^&]+)/)?.[1] ?? "";
+			const port = new URL(decodeURIComponent(callbackUrl)).port;
+
+			await new Promise<void>((resolve) => {
+				const req = http.request(
+					{
+						hostname: "localhost",
+						port: Number(port),
+						path: `/callback?api_key=token&state=${testState}`,
+						method: "GET",
+					},
+					() => resolve(),
+				);
+				req.end();
+			});
+
+			await loginPromise;
+		});
+
 		describe("accent color", () => {
 			it("uses default gold accent color", async () => {
 				const openBrowser = vi.fn().mockResolvedValue(undefined);
