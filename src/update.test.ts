@@ -2,9 +2,8 @@
  * Tests for update command utilities.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-	type PackageManager,
 	detectPackageManager,
 	getLatestVersion,
 	getUpdateCommand,

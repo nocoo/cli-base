@@ -109,6 +109,7 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 		const expectedState = generateNonce();
 
 		const server = http.createServer((req, res) => {
+			/* v8 ignore next -- @preserve req.url default only fires on malformed requests */
 			const url = new URL(req.url ?? "/", "http://localhost");
 
 			if (url.pathname !== "/callback") {
@@ -180,6 +181,7 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 			});
 
 			server.once("error", (err: NodeJS.ErrnoException) => {
+				/* v8 ignore start -- @preserve IPv6 fallback only fires in restricted-network envs */
 				if (
 					fallbackHost &&
 					(err.code === "EPERM" ||
@@ -196,12 +198,13 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 						error: `Local server error: ${err.message}`,
 					});
 				}
+				/* v8 ignore stop -- @preserve */
 			});
 		}
 
 		function onListening() {
 			const addr = server.address();
-			/* c8 ignore next 4 -- defensive: server.address() can return string on pipe */
+			/* v8 ignore next 4 -- @preserve defensive: server.address() can return string on pipe */
 			if (!addr || typeof addr === "string") {
 				cleanup();
 				resolve({ success: false, error: "Failed to start local server" });
@@ -221,6 +224,7 @@ export function performLogin(deps: LoginDeps): Promise<LoginResult> {
 
 			openBrowser(loginUrl).catch(() => {
 				// Browser failed — print URL so user can open manually
+				/* v8 ignore next 3 -- @preserve optional log dep; absent-log path is trivial */
 				if (log) {
 					log(`Could not open browser. Open this URL manually:\n  ${loginUrl}`);
 				}

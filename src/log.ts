@@ -4,7 +4,7 @@
  * Built on consola with additional formatting helpers.
  */
 
-import { type ConsolaInstance, type LogLevel, createConsola } from "consola";
+import { type ConsolaInstance, createConsola, type LogLevel } from "consola";
 
 export interface LoggerOptions {
 	/** Logger name (shown in output) */
@@ -71,6 +71,6 @@ export function formatDate(input: string | Date): string {
 	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+export type { ConsolaInstance, LogLevel } from "consola";
 // Re-export consola for direct use
 export { consola } from "consola";
-export type { ConsolaInstance, LogLevel } from "consola";

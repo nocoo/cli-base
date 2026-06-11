@@ -182,6 +182,7 @@ export class ConfigManager<T extends Record<string, unknown>> {
 		try {
 			const raw = await readFile(devicePath, "utf-8");
 			const data = JSON.parse(raw) as { deviceId?: string };
+			/* v8 ignore next 3 -- @preserve defensive: malformed device.json without deviceId */
 			if (data.deviceId) {
 				return data.deviceId;
 			}

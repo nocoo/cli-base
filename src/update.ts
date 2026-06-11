@@ -23,7 +23,7 @@ export function detectPackageManager(
 	packageName: string,
 	execSync?: ExecSyncFn,
 ): PackageManager | null {
-	/* c8 ignore next 4 -- default exec uses real child_process */
+	/* v8 ignore next 4 -- @preserve default exec uses real child_process */
 	const exec =
 		execSync ??
 		((cmd: string) => {
@@ -83,6 +83,7 @@ export async function getLatestVersion(
 	packageName: string,
 	fetchFn?: FetchFn,
 ): Promise<string | null> {
+	/* v8 ignore next -- @preserve real fetch default used in production only */
 	const doFetch = fetchFn ?? fetch;
 
 	try {

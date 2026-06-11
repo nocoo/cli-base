@@ -4,9 +4,6 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
-      // experimentalAstAwareRemapping intentionally omitted — enabling it on vitest 3.x
-      // causes coverage variance that drops lines/statements below the 95% thresholds.
-      // Re-evaluate when upgrading to vitest v4 (where AST remapping is the default).
       reporter: ["text", "json", "html"],
       exclude: [
         // Test files themselves.

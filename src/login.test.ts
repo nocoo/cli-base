@@ -4,12 +4,7 @@
 
 import http from "node:http";
 import { describe, expect, it, vi } from "vitest";
-import {
-	type LoginDeps,
-	defaultGenerateNonce,
-	escapeHtml,
-	performLogin,
-} from "./login.js";
+import { defaultGenerateNonce, escapeHtml, performLogin } from "./login.js";
 
 describe("login", () => {
 	describe("escapeHtml", () => {
@@ -59,7 +54,7 @@ describe("login", () => {
 
 	describe("performLogin", () => {
 		// Helper to extract state from URL
-		function extractState(url: string): string {
+		function _extractState(url: string): string {
 			const match = url.match(/state=([^&]+)/);
 			return match ? decodeURIComponent(match[1]) : "";
 		}
@@ -525,6 +520,45 @@ describe("login", () => {
 				expect(result.success).toBe(false);
 				expect(result.error).toContain("CSRF");
 			});
+		});
+
+		it("appends extraParams to the login URL", async () => {
+			const openBrowser = vi.fn().mockResolvedValue(undefined);
+			const onSaveToken = vi.fn();
+			const testState = "test-state-extras";
+
+			const loginPromise = performLogin({
+				openBrowser,
+				onSaveToken,
+				apiUrl: "https://example.com",
+				timeoutMs: 5000,
+				generateNonce: () => testState,
+				extraParams: { hostname: "alice-laptop", source: "cli" },
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			const url = openBrowser.mock.calls[0][0] as string;
+			expect(url).toContain("hostname=alice-laptop");
+			expect(url).toContain("source=cli");
+
+			const callbackUrl = url.match(/callback=([^&]+)/)?.[1] ?? "";
+			const port = new URL(decodeURIComponent(callbackUrl)).port;
+
+			await new Promise<void>((resolve) => {
+				const req = http.request(
+					{
+						hostname: "localhost",
+						port: Number(port),
+						path: `/callback?api_key=token&state=${testState}`,
+						method: "GET",
+					},
+					() => resolve(),
+				);
+				req.end();
+			});
+
+			await loginPromise;
 		});
 
 		describe("accent color", () => {

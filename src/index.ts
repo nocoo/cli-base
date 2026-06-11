@@ -10,14 +10,34 @@
  * - Cross-platform browser opening
  */
 
+export type { ArgsDef, CommandDef, SubCommandsDef } from "citty";
+// Re-export citty for convenience
+export { defineCommand, runMain, showUsage } from "citty";
+// Re-export picocolors for convenience
+export { default as pc } from "picocolors";
+// Re-export yocto-spinner for convenience
+export { default as yoctoSpinner } from "yocto-spinner";
+export { getBrowserCommand, openBrowser } from "./browser.js";
 // Core utilities
 export { ConfigManager, type ConfigManagerOptions } from "./config.js";
+
+// Logging
 export {
-	performLogin,
-	escapeHtml,
+	type ConsolaInstance,
+	consola,
+	createLogger,
+	formatDate,
+	formatDuration,
+	formatSize,
+	type LoggerOptions,
+	type LogLevel,
+} from "./log.js";
+export {
 	defaultGenerateNonce,
+	escapeHtml,
 	type LoginDeps,
 	type LoginResult,
+	performLogin,
 } from "./login.js";
 export {
 	detectPackageManager,
@@ -29,27 +49,4 @@ export {
 	createUpdateCommand,
 	type UpdateCommandOptions,
 } from "./update-command.js";
-export { readVersion, compareVersions, isNewerVersion } from "./version.js";
-export { getBrowserCommand, openBrowser } from "./browser.js";
-
-// Logging
-export {
-	createLogger,
-	formatDuration,
-	formatSize,
-	formatDate,
-	consola,
-	type LoggerOptions,
-	type ConsolaInstance,
-	type LogLevel,
-} from "./log.js";
-
-// Re-export citty for convenience
-export { defineCommand, runMain, showUsage } from "citty";
-export type { CommandDef, ArgsDef, SubCommandsDef } from "citty";
-
-// Re-export picocolors for convenience
-export { default as pc } from "picocolors";
-
-// Re-export yocto-spinner for convenience
-export { default as yoctoSpinner } from "yocto-spinner";
+export { compareVersions, isNewerVersion, readVersion } from "./version.js";
