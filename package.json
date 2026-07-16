@@ -28,10 +28,10 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
     "@types/node": "^26.1.1",
-    "@vitest/coverage-v8": "4.1.8",
+    "@vitest/coverage-v8": "^4.1.10",
     "husky": "^9.1.7",
     "typescript": "6.0.3",
-    "vitest": "4.1.8"
+    "vitest": "^4.1.10"
   },
   "keywords": [
     "cli",
