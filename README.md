@@ -1,4 +1,4 @@
-<h1 align="center">cli-base</h1>
+<h1 align="center">base-cli</h1>
 
 <p align="center">
   <strong>Shared CLI infrastructure for TypeScript projects</strong><br>
@@ -8,22 +8,22 @@
 <p align="center">
   <img src="https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun" alt="Bun">
   <img src="https://img.shields.io/badge/lang-TypeScript-3178c6?logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/npm/v/@nocoo/cli-base" alt="npm version">
+  <img src="https://img.shields.io/npm/v/@nocoo/base-cli" alt="npm version">
   <img src="https://img.shields.io/badge/coverage-95%2B-brightgreen" alt="Coverage">
-  <img src="https://img.shields.io/github/license/nocoo/cli-base" alt="License">
+  <img src="https://img.shields.io/github/license/nocoo/base-cli" alt="License">
 </p>
 
 ---
 
 ## 这是什么
 
-cli-base 是一个 CLI 工具的基础设施库，为多个 CLI 项目提供统一的底层能力。避免在 pika、pew、otter 等项目中重复实现配置管理、OAuth 登录、自动更新等通用逻辑。
+base-cli 是一个 CLI 工具的基础设施库，为多个 CLI 项目提供统一的底层能力。避免在 pika、pew、otter 等项目中重复实现配置管理、OAuth 登录、自动更新等通用逻辑。
 
 ```
 ┌─────────────────────────────────────────────────┐
 │                   Your CLI                       │
 ├─────────────────────────────────────────────────┤
-│  cli-base                                        │
+│  base-cli                                        │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐ │
 │  │ Config  │ │  Login  │ │ Update  │ │  Log   │ │
 │  └─────────┘ └─────────┘ └─────────┘ └────────┘ │
@@ -44,17 +44,19 @@ cli-base 是一个 CLI 工具的基础设施库，为多个 CLI 项目提供统�
 ## 安装
 
 ```bash
-bun add @nocoo/cli-base
+bun add @nocoo/base-cli
 # or
-npm install @nocoo/cli-base
+npm install @nocoo/base-cli
 ```
+
+> **迁移提示**：本包由 `@nocoo/cli-base` 更名而来，旧包已 deprecate。请直接安装 `@nocoo/base-cli`，import 路径同步替换即可，API 完全兼容。
 
 ## 使用示例
 
 ### 配置管理
 
 ```typescript
-import { ConfigManager } from "@nocoo/cli-base";
+import { ConfigManager } from "@nocoo/base-cli";
 
 interface MyConfig {
   token?: string;
@@ -69,7 +71,7 @@ const token = config.get("token");
 ### 登录流程
 
 ```typescript
-import { performLogin, openBrowser } from "@nocoo/cli-base";
+import { performLogin, openBrowser } from "@nocoo/base-cli";
 
 const result = await performLogin({
   openBrowser,
@@ -82,7 +84,7 @@ const result = await performLogin({
 ### 更新检测
 
 ```typescript
-import { detectPackageManager, getLatestVersion, getUpdateCommand } from "@nocoo/cli-base";
+import { detectPackageManager, getLatestVersion, getUpdateCommand } from "@nocoo/base-cli";
 
 const pm = detectPackageManager("@nocoo/my-cli");
 const latest = await getLatestVersion("@nocoo/my-cli");
@@ -94,7 +96,7 @@ if (pm && latest) {
 ## 项目结构
 
 ```
-cli-base/
+base-cli/
 ├── src/
 │   ├── index.ts          # 导出所有模块
 │   ├── config.ts         # ConfigManager 泛型类
@@ -123,8 +125,8 @@ cli-base/
 **环境要求：** Bun 1.0+, Node.js 18+
 
 ```bash
-git clone https://github.com/nocoo/cli-base.git
-cd cli-base
+git clone https://github.com/nocoo/base-cli.git
+cd base-cli
 bun install
 ```
 
