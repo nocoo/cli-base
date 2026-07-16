@@ -1,5 +1,5 @@
 /**
- * @nocoo/cli-base — Shared CLI infrastructure
+ * @nocoo/base-cli — Shared CLI infrastructure
  *
  * Provides common utilities for CLI applications:
  * - Configuration management

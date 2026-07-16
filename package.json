@@ -1,5 +1,5 @@
 {
-  "name": "@nocoo/cli-base",
+  "name": "@nocoo/base-cli",
   "version": "0.2.4",
   "description": "Shared CLI infrastructure for hexly.ai projects",
   "type": "module",
@@ -44,7 +44,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nocoo/cli-base.git"
+    "url": "https://github.com/nocoo/base-cli.git"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json}": [

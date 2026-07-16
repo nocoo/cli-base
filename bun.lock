@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@nocoo/cli-base",
+      "name": "@nocoo/base-cli",
       "dependencies": {
         "citty": "^0.2.2",
         "consola": "^3.4.2",

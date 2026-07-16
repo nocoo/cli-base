@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**@nocoo/cli-base** is a shared CLI infrastructure library for hexly.ai TypeScript projects. It provides reusable components for building CLI tools: config management, OAuth login flows, update checking, version utilities, browser opening, and logging.
+**@nocoo/base-cli** is a shared CLI infrastructure library for hexly.ai TypeScript projects. It provides reusable components for building CLI tools: config management, OAuth login flows, update checking, version utilities, browser opening, and logging.
 
 ## Tech Stack
 

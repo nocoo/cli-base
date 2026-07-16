@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Release script for @nocoo/cli-base
+ * Release script for @nocoo/base-cli
  *
  * Usage:
  *   bun run release          # patch (0.1.1 -> 0.1.2)
@@ -114,7 +114,7 @@ async function main() {
 	const currentVersion = pkg.version;
 	const newVersion = bumpVersion(currentVersion, versionArg);
 
-	console.log(`\n📦 @nocoo/cli-base release`);
+	console.log(`\n📦 @nocoo/base-cli release`);
 	console.log(`   ${currentVersion} → ${newVersion}`);
 	console.log(`   ${dryRun ? "(dry run)" : ""}\n`);
 
@@ -198,10 +198,10 @@ async function main() {
 		);
 	}
 
-	console.log(`\n✅ Released @nocoo/cli-base@${newVersion}`);
-	console.log(`   npm: https://www.npmjs.com/package/@nocoo/cli-base`);
+	console.log(`\n✅ Released @nocoo/base-cli@${newVersion}`);
+	console.log(`   npm: https://www.npmjs.com/package/@nocoo/base-cli`);
 	console.log(
-		`   GitHub: https://github.com/nocoo/cli-base/releases/tag/v${newVersion}`,
+		`   GitHub: https://github.com/nocoo/base-cli/releases/tag/v${newVersion}`,
 	);
 }
 

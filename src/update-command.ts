@@ -30,7 +30,7 @@ export interface UpdateCommandOptions {
  *
  * @example
  * ```ts
- * import { createUpdateCommand } from "@nocoo/cli-base";
+ * import { createUpdateCommand } from "@nocoo/base-cli";
  * import { PIKA_VERSION } from "@pika/core";
  *
  * export default createUpdateCommand({

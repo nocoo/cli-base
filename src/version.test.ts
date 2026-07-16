@@ -12,7 +12,7 @@ describe("version", () => {
 	let testDir: string;
 
 	beforeEach(() => {
-		testDir = join(tmpdir(), `cli-base-version-test-${Date.now()}`);
+		testDir = join(tmpdir(), `base-cli-version-test-${Date.now()}`);
 		mkdirSync(testDir, { recursive: true });
 	});
 

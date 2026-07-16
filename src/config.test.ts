@@ -12,7 +12,7 @@ describe("ConfigManager", () => {
 	let testDir: string;
 
 	beforeEach(() => {
-		testDir = join(tmpdir(), `cli-base-test-${Date.now()}`);
+		testDir = join(tmpdir(), `base-cli-test-${Date.now()}`);
 		mkdirSync(testDir, { recursive: true });
 	});
 
