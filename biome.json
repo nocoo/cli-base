@@ -3,7 +3,45 @@
 	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"linter": {
 		"enabled": true,
-		"rules": { "recommended": true }
+		"rules": {
+			"preset": "all",
+			"nursery": {
+				"recommended": true
+			},
+			"correctness": {
+				"noNodejsModules": "off",
+				"noProcessGlobal": "off",
+				"useImportExtensions": "off",
+				"useQwikValidLexicalScope": "off"
+			},
+			"security": {
+				"noSecrets": "off"
+			},
+			"suspicious": {
+				"noBitwiseOperators": "off",
+				"noUnnecessaryConditions": "off"
+			},
+			"style": {
+				"noMagicNumbers": "off",
+				"useBlockStatements": "off",
+				"useDestructuring": "off",
+				"useNumericSeparators": "off",
+				"noTernary": "off",
+				"noCommonJs": "off",
+				"noIncrementDecrement": "off",
+				"useExportsLast": "off",
+				"noExcessiveLinesPerFile": "off"
+			},
+			"complexity": {
+				"noExcessiveLinesPerFunction": "off",
+				"noExcessiveCognitiveComplexity": "off",
+				"noUselessUndefined": "off"
+			},
+			"performance": {
+				"useTopLevelRegex": "off",
+				"noBarrelFile": "off"
+			}
+		}
 	},
 	"formatter": {
 		"enabled": true,
