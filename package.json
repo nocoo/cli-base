@@ -1,6 +1,6 @@
 {
   "name": "@nocoo/base-cli",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Shared CLI infrastructure for hexly.ai projects",
   "type": "module",
   "main": "dist/index.js",

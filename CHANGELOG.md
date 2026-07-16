@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-07-17
+
+### Features
+
+- add extraParams option to performLogin
+
+### Fixes
+
+- bump brace-expansion to 5.0.6 (GHSA-jxxr-4gwj-5jf2)
+- resolve OSV medium vulnerability
+- remove broken logo from README
+
 ## [0.2.4] - 2026-04-18
 
 ### Features
