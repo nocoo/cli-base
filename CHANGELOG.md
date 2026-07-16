@@ -4,15 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [0.3.0] - 2026-07-17
 
-### Features
+### Breaking Changes
 
-- add extraParams option to performLogin
+- **Package renamed** from `@nocoo/cli-base` to `@nocoo/base-cli`.
+  The old package on npm is deprecated and points at this new name.
+  API surface is unchanged — consumers only need to update their `package.json` dependency and `import` paths:
 
-### Fixes
+  ```diff
+  - "@nocoo/cli-base": "^0.2.4"
+  + "@nocoo/base-cli": "^0.3.0"
+  ```
 
-- bump brace-expansion to 5.0.6 (GHSA-jxxr-4gwj-5jf2)
-- resolve OSV medium vulnerability
-- remove broken logo from README
+  ```diff
+  - import { ConfigManager } from "@nocoo/cli-base";
+  + import { ConfigManager } from "@nocoo/base-cli";
+  ```
+
+### Chores
+
+- upgrade TypeScript `6.0.3` → `^7.0.2`
+- tighten Biome to `preset: "all"` + `nursery.recommended`, with a small set of explicit opt-outs documented in `biome.json`
+- bump `@biomejs/biome` `2.4.16` → `^2.5.4`
+- bump `vitest` and `@vitest/coverage-v8` `4.1.8` → `^4.1.10`
+- bump `@types/node` `^25.9.2` → `^26.1.1`
+- remove unused runtime dependency `postcss` (overrides still enforce the CVE floor)
 
 ## [0.2.4] - 2026-04-18
 
