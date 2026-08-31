@@ -11,6 +11,8 @@ jobs:
   quality:
     uses: nocoo/base-ci/.github/workflows/bun-quality.yml@aec4adc1a817c56790d1698329ef9398a15a754a  # v2026.5
     with:
+      # An exact version avoids setup-bun's GitHub Tags API lookup for `latest`.
+      bun-version: "1.3.14"
       ignore-scripts: true
       pre-command: "bun run build"
       test-command: "bun run test:coverage"
