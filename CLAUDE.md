@@ -22,7 +22,7 @@ This file is the **contract**. Hooks, CI, and config are **enforcement**. If the
 
 - Ship `files: ["dist"]` (`main`/`types` under `dist/`). Do not publish `src/`.
 - `dist/` is gitignored. `bun run build` (`tsc`) must exist before `npm publish`; `scripts/release.ts` currently does **not** run build.
-- Vitest coverage excludes `scripts/`, `src/index.ts`, `src/update-command.ts`. Do not drop those excludes without a replacement suite.
+- Vitest coverage excludes `scripts/` and `src/index.ts`. `src/update-command.ts` is also excluded — that is a coverage gap, not a tested wrapper.
 - Config files this library writes use mode `0600`.
 - Hooks are check-only. Do not run `lint:fix` from a hook.
 
@@ -60,7 +60,7 @@ Status: `enforced` | `planned` | `manual` | `N/A`. `enforced` Evidence = hook/CI
 
 Org gaps to raise later (do not lower this file): index-snapshot pre-commit; stdin-range pre-push; coverage on pre-commit; `.skip`/`.only`; gitleaks missing binary must fail (pre-push currently skips); release must `build` and must not `--no-verify`.
 
-Today: pre-commit typecheck/lint/`test` (no coverage)/`gitleaks protect --staged` on the working tree. pre-push gitleaks detect (skip if missing) + osv-scanner. CI `bun-quality.yml@aec4adc` (v2026.5): build, lint, `test:coverage`, gitleaks, osv; typecheck command is `true` (skipped; emit is the pre-command `tsc`). `lint-staged` in package.json is unused.
+Today: pre-commit typecheck/lint/`test` (no coverage)/`gitleaks protect --staged` on the working tree. pre-push gitleaks detect (skip if missing) + osv-scanner. CI `bun-quality.yml@aec4adc1a817c56790d1698329ef9398a15a754a` (comment: v2026.5): build, lint, `test:coverage`, gitleaks, osv; typecheck command is `true` (skipped; emit is the pre-command `tsc`). `lint-staged` in package.json is unused.
 
 | Change | Proof | Status | Evidence |
 |---|---|---|---|
@@ -73,7 +73,7 @@ Today: pre-commit typecheck/lint/`test` (no coverage)/`gitleaks protect --staged
 | `.skip` / `.only` | lint error | planned | — |
 | Bundler | `tsc` → `dist/` | enforced | CI pre-command `bun run build`; not in husky; release does not build |
 | Docs | README if public API changes | manual | human review |
-| Release | bump + changelog + npm + gh release | manual | `bun run release` (`scripts/release.ts`) |
+| Release | bump + changelog + npm + gh release | enforced | `scripts/release.ts` via `bun run release` |
 
 | Hook | Org bar | Status | Evidence |
 |---|---|---|---|
@@ -84,9 +84,10 @@ Today: pre-commit typecheck/lint/`test` (no coverage)/`gitleaks protect --staged
 
 ## Operations / Release
 
-- Entry: `bun run release` (patch default; `minor` / `major` / `x.y.z`; `--dry-run`). Auth: npm publish + `gh`.
+- Entry: `bun run release` (patch default; `minor` / `major` / `x.y.z`; `--dry-run`). Who: npm publish rights on `@nocoo/base-cli` and GitHub write on `nocoo/base-cli` (`gh release`).
 - Script runs `test:coverage` + `lint`, writes `package.json` + `CHANGELOG.md`, commit/tag/push `--no-verify`, `npm publish --access public`, `gh release create`. It does not run `bun run build`.
-- Pin CI as `nocoo/base-ci/.github/workflows/bun-quality.yml@aec4adc` (comment: v2026.5). Do not switch the pin to moving `@v2026`.
+- Live-check: `npm view @nocoo/base-cli version` and the GitHub release URL the script prints.
+- Pin CI as `nocoo/base-ci/.github/workflows/bun-quality.yml@aec4adc1a817c56790d1698329ef9398a15a754a` (ci.yml comment: v2026.5). Do not switch the pin to moving `@v2026`.
 
 ## Retrospective
 
@@ -97,5 +98,5 @@ Today: pre-commit typecheck/lint/`test` (no coverage)/`gitleaks protect --staged
 | Cross-project | nmem / global rules |
 | Checkable rule | hook or test |
 
-- Coverage excludes `scripts/`, `src/index.ts`, `src/update-command.ts`.
+- Coverage excludes `scripts/` and `src/index.ts`. `src/update-command.ts` is an untested coverage gap.
 - Publish `dist/`, not `src/`.
