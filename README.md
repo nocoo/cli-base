@@ -150,6 +150,10 @@ bun install
 bun run test:coverage
 ```
 
+## 发布
+
+npm 包 `files` 为 `dist/`（`main`/`types` 也在 `dist/` 下）。`dist/` 已 gitignore，`npm publish` 前必须先 `bun run build`。`bun run release` 目前不会执行 build。
+
 ## License
 
 [MIT](LICENSE) © 2026
