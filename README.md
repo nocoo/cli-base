@@ -152,7 +152,7 @@ bun run test:coverage
 
 ## 发布
 
-npm 包 `files` 为 `dist/`（`main`/`types` 也在 `dist/` 下）。`dist/` 已 gitignore，`npm publish` 前必须先 `bun run build`。`bun run release` 目前不会执行 build。
+npm 包 `files` 为 `dist/`（`main`/`types` 也在 `dist/` 下）。`dist/` 已 gitignore。发布入口：`bun run build && bun run release`。`scripts/release.ts` 本身不会执行 build。
 
 ## License
 
