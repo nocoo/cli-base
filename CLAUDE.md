@@ -1,70 +1,101 @@
-# CLAUDE.md
+# base-cli
 
-## Project Overview
+Shared CLI infrastructure (`@nocoo/base-cli`): config, OAuth loopback login, update check, version, browser open, logging.
+Profile: cli-library
+Direction: [README.md](README.md). No `docs/` tree. Frameworks must not rewrite this file.
 
-**@nocoo/base-cli** is a shared CLI infrastructure library for hexly.ai TypeScript projects. It provides reusable components for building CLI tools: config management, OAuth login flows, update checking, version utilities, browser opening, and logging.
+## Sources of Truth
 
-## Tech Stack
+This file is the **contract**. Hooks, CI, and config are **enforcement**. If they disagree, that is a failure — raise enforcement; never lower this file to a weaker hook.
 
-- **Runtime**: Bun
-- **Language**: TypeScript (strict)
-- **Dependencies**: citty, consola, picocolors, yocto-spinner
-- **Testing**: Vitest (95%+ coverage threshold)
-- **Linting**: TypeScript + Biome
-- **Git Hooks**: Husky (6DQ: L1 + G1 pre-commit, G2 pre-push)
+| Fact | Where |
+|---|---|
+| Agent handbook | this file |
+| Human docs | README.md |
+| Version | `package.json` `"version"` |
+| Enforcement | `.husky/*`, `.github/workflows/ci.yml`, `vitest.config.ts` |
+| Machine rules | global `AGENTS.md`, `rules/git-commit.md` |
+| Accidents | [Retrospective.md](Retrospective.md) |
+| Env files | omit |
 
-## Key Commands
+## Project Invariants
 
-```bash
-bun install              # Install dependencies
-bun run test             # Run unit tests
-bun run test:coverage    # Run tests with coverage report
-bun run lint             # Type-check + Biome lint
-bun run lint:fix         # Auto-fix lint issues
+- Ship `files: ["dist"]` (`main`/`types` under `dist/`). Do not publish `src/`.
+- `dist/` is gitignored. `bun run build` (`tsc`) must exist before `npm publish`; `scripts/release.ts` currently does **not** run build.
+- Vitest coverage excludes `scripts/`, `src/index.ts`, `src/update-command.ts`. Do not drop those excludes without a replacement suite.
+- Config files this library writes use mode `0600`.
+- Hooks are check-only. Do not run `lint:fix` from a hook.
 
-# Release (automated)
-bun run release          # Patch release (0.1.1 → 0.1.2)
-bun run release minor    # Minor release (0.1.1 → 0.2.0)
-bun run release major    # Major release (0.1.1 → 1.0.0)
-bun run release 1.2.3    # Explicit version
-bun run release --dry-run # Preview without executing
+## Stack / Layout
+
+| Component | Choice |
+|---|---|
+| Language | TypeScript 7 strict |
+| Package manager | Bun |
+| Runtime | library for Bun/Node CLIs (citty, consola, picocolors, yocto-spinner) |
+| Lint | `tsc --noEmit` + Biome `check --error-on-warnings src/` |
+| Tests | Vitest L1 (95% statements/branches/functions/lines) |
+| Data | none (consumers own config dirs) |
+
+```
+src/          library + `*.test.ts`
+scripts/      release.ts
 ```
 
-## Release Script
+## Commands
 
-`scripts/release.ts` automates the full release workflow:
+```bash
+bun run typecheck
+bun run lint
+bun run build
+bun run test
+bun run test:coverage
+bun run release
+bun run release --dry-run
+```
 
-1. Validates clean working directory
-2. Runs `bun run test:coverage`
-3. Runs `bun run lint`
-4. Bumps version in package.json
-5. Generates CHANGELOG.md entry from git commits
-6. Creates git commit + tag
-7. Pushes to GitHub (with tag)
-8. Publishes to npm
-9. Creates GitHub release
+## Verification
 
-## Module Structure
+Status: `enforced` | `planned` | `manual` | `N/A`. `enforced` Evidence = hook/CI/config/script. `planned` has no Evidence. `manual` = human checklist.
 
-| Module | Purpose |
-|--------|---------|
-| `config.ts` | Generic ConfigManager<T> with dev/prod separation, sync/async API, 0600 permissions |
-| `login.ts` | Browser OAuth with local loopback callback server, XSS protection |
-| `update.ts` | Package manager detection (bun/pnpm/yarn/npm), npm registry queries |
-| `version.ts` | Read version from package.json, semver comparison |
-| `browser.ts` | Cross-platform URL opening (macOS/Windows/Linux) |
-| `log.ts` | Consola wrapper with formatDuration/formatSize/formatDate helpers |
-| `index.ts` | Re-exports all modules + citty, consola, picocolors, yocto-spinner |
+Org gaps to raise later (do not lower this file): index-snapshot pre-commit; stdin-range pre-push; coverage on pre-commit; `.skip`/`.only`; gitleaks missing binary must fail (pre-push currently skips); release must `build` and must not `--no-verify`.
 
-## Six-Dimension Quality Framework
+Today: pre-commit typecheck/lint/`test` (no coverage)/`gitleaks protect --staged` on the working tree. pre-push gitleaks detect (skip if missing) + osv-scanner. CI `bun-quality.yml@aec4adc` (v2026.5): build, lint, `test:coverage`, gitleaks, osv; typecheck command is `true` (skipped; emit is the pre-command `tsc`). `lint-staged` in package.json is unused.
 
-| Dimension | What | When | Threshold |
-|-----------|------|------|-----------|
-| L1: UT | Business logic unit tests | pre-commit | 95% coverage |
-| G1: Static | tsc --noEmit + Biome lint | pre-commit | Zero errors |
-| G2: Security | gitleaks secret scanning | pre-push | Zero findings |
+| Change | Proof | Status | Evidence |
+|---|---|---|---|
+| Logic | L1 vitest ≥95% all four metrics | enforced | CI → `test:coverage`; `vitest.config.ts`. pre-commit → `test` without thresholds |
+| API L2 | — | N/A | — |
+| UI L3 | — | N/A | — |
+| Types / lint | tsc + Biome 0 warning | enforced | pre-commit → `typecheck`, `lint` (working tree); CI → `lint` (`tsc` emit via pre-command). tsc excludes `**/*.test.ts` |
+| G2 secrets | gitleaks | enforced | pre-commit → `gitleaks protect --staged`; CI bun-quality. pre-push `gitleaks detect` skips if binary missing |
+| G2 deps | osv-scanner | enforced | pre-push → `osv-scanner scan --lockfile=bun.lock --config=osv-scanner.toml`; CI bun-quality (no `osv-config` input) |
+| `.skip` / `.only` | lint error | planned | — |
+| Bundler | `tsc` → `dist/` | enforced | CI pre-command `bun run build`; not in husky; release does not build |
+| Docs | README if public API changes | manual | human review |
+| Release | bump + changelog + npm + gh release | manual | `bun run release` (`scripts/release.ts`) |
+
+| Hook | Org bar | Status | Evidence |
+|---|---|---|---|
+| pre-commit | index snapshot for G1+L1 | planned | — |
+| pre-push | stdin ref range | planned | — |
+
+`--no-verify` forbidden on commits and branch pushes. Tag-only may skip. `scripts/release.ts` currently commits and pushes with `--no-verify` — do not copy that for normal work.
+
+## Operations / Release
+
+- Entry: `bun run release` (patch default; `minor` / `major` / `x.y.z`; `--dry-run`). Auth: npm publish + `gh`.
+- Script runs `test:coverage` + `lint`, writes `package.json` + `CHANGELOG.md`, commit/tag/push `--no-verify`, `npm publish --access public`, `gh release create`. It does not run `bun run build`.
+- Pin CI as `nocoo/base-ci/.github/workflows/bun-quality.yml@aec4adc` (comment: v2026.5). Do not switch the pin to moving `@v2026`.
 
 ## Retrospective
 
-- **npm package files field**: Publishing TypeScript source directly (`files: ["src"]`) instead of compiled dist. Consumers use their own bundler/transpiler.
-- **vitest coverage exclude**: `scripts/` directory must be excluded from coverage calculation — release script is not unit-testable and would tank coverage metrics.
+| Kind | Where |
+|---|---|
+| Accident narrative | [Retrospective.md](Retrospective.md) |
+| Recurring project rule | one line here (cap ~10) |
+| Cross-project | nmem / global rules |
+| Checkable rule | hook or test |
+
+- Coverage excludes `scripts/`, `src/index.ts`, `src/update-command.ts`.
+- Publish `dist/`, not `src/`.
