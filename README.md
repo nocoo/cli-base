@@ -141,9 +141,10 @@ bun install
 
 | 层 | 内容 | 触发时机 |
 |---|------|---------|
-| L1 | 单元测试 (95%+ 覆盖率) | pre-commit |
-| G1 | tsc + Biome | pre-commit |
-| G2 | gitleaks 密钥扫描 | pre-push |
+| L1 | 单元测试 | pre-commit `bun run test`（无覆盖率阈值）；95% 四项在 CI `test:coverage` |
+| G1 | tsc + Biome | pre-commit + CI |
+| G2 secrets | gitleaks | pre-commit + CI；pre-push 在二进制缺失时 skip |
+| G2 deps | osv-scanner | pre-push + CI |
 
 ```bash
 bun run test:coverage
