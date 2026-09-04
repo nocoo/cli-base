@@ -20,9 +20,9 @@ export default defineConfig({
          */
         "src/index.ts",
         /*
-         * Thin wrapper around the underlying update flow. Behaviour is
-         * exercised end-to-end via the integration suite rather than unit
-         * tests, so excluding it here avoids misleading coverage gaps.
+         * Thin wrapper around the underlying update flow. No unit test and
+         * no L2/integration suite yet (CI enable-l2 is false) — excluded as
+         * a known coverage gap until tests exist.
          */
         "src/update-command.ts",
       ],
